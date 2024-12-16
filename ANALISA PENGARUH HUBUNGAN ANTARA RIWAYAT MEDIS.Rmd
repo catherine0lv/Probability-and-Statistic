@@ -1,0 +1,248 @@
+---
+title: "Lembar Final Project Kelompok 3 UMN"
+output:
+  pdf_document:
+    fig_height: 4.5
+    fig_width: 6
+    highlight: tango
+    number_sections: yes
+    toc_depth: 4
+  html_document:
+    number_sections: yes
+  word_document:
+    toc_depth: '4'
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(OutDec = ",")
+library(readxl)
+```
+
+******************************************************
+Topik Project   | Analisa pengaruh hubungan antara riwayat medis dengan penyakit diabetes
+----------------|----------             
+Kelompok        | 3  
+Nama            | Haura Putry Yasha (75900), Catherine Olivia (76229), Zevanaya Beverly Drew (77121) dan Melissa Triana (77664).
+Kelas           | IHY      
+******************************************************
+
+# Jawaban
+
+```{r}
+# Packages
+library(readxl)
+library(nortest)
+library(ggplot2)
+library(moments)
+
+# Impor Data 
+diabetes1 <- readxl::read_excel("diabetes.xlsx", sheet = "Sheet1")
+
+# Mengubah Variabel menjadi Numerik
+umur <- as.numeric(diabetes1$age)
+```
+
+# Visualisasi Data
+```{r}
+# Visualisasi Data Diabetes 
+# Gender
+barplot(table(diabetes1$gender), main = "Distribusi Jenis Kelamin", col = "lightblue")
+
+# Umur
+hist(umur, main = "Distribusi Umur", col = "pink")
+
+# Riwayat Merokok
+barplot(table(diabetes1$smoking_history), main = "Distribusi Riwayat Merokok", col = "red")
+
+# Penyakit Jantung
+barplot(table(diabetes1$heart_disease), main = "Distribusi Riwayat Penyakit Jantung", col = "darkblue")
+
+# Gula Darah
+hist(diabetes1$blood_glucose_level, main = "Distribusi Riwayat Gula Darah", col = "brown")
+
+# Diabetes
+barplot(table(diabetes1$diabetes), main = "Distribusi Hasil Tes Diabetes", col = "lightgreen")
+
+```
+
+# Statistika Deskriptif
+```{r}
+# Rerata Variabel Numerik
+(meanUmur <- mean(umur))
+# Mean Umur = 41,88586
+
+(meanGulaDarah <- mean(diabetes1$blood_glucose_level))
+# Mean Gula Darah = 138,0581
+```
+
+```{r}
+# Simpangan Baku atau Standar Deviasi Variabel Numerik
+(sdUmur <- sd(umur))
+# Simpangan Baku Umur = 22,51684
+
+(sdGulaDarah <- sd(diabetes1$blood_glucose_level))
+# Simpangan Baku Gula Darah = 40,70814
+```
+
+```{r}
+# Koefisien Variasi Variabel Numerik
+(cvUmur <- sdUmur / meanUmur) * 100
+# Koefisien Variasi Umur = 53,75762
+
+(cvnGulaDarah <- sdGulaDarah / meanGulaDarah) * 100
+# Koefisien Variasi Gula Darah = 29,48624 
+```
+
+# Uji Normalitas
+```{r}
+# Skewness Variabel Numerik
+# untuk mengukur kemiringan data
+(skewnessUmur <- skewness(umur)) 
+# Hasil Skewness (-0,05) mendekati 0, data umur berdistribusi secara simetris.
+
+(skewnessGulaDarah <- skewness(diabetes1$blood_glucose_level))
+# Hasil Skewness (0,8) tidak mendekati 0, data gula darah memiliki kemiringan yang moderat atau sedang.
+```
+
+```{r}
+# Kurtosis Variabel Numerik
+# untuk mengukur keruncingan kurva dari distribusi data
+(kurtosisUmur <- kurtosis(umur))
+# Kurtosis (1,99) lebih rendah dari 3, kurva distribusi umur landai atau rendah.
+
+(kurtosisGulaDarah <- kurtosis(diabetes1$blood_glucose_level))
+# Kurtosis (4,73) lebih tinggi dari 3, kurva distribusi gula darah sangat runcing.
+```
+
+```{r}
+# Anderson Darling Test
+ad.test(umur) 
+#p-value < 0,05 = tidak berdistribusi dengan normal
+
+ad.test(diabetes1$blood_glucose_level) 
+#p-value < 0,05 = tidak berdistribusi dengan normal
+
+```
+
+# Grafik Normalitas
+```{r}
+plot(density(umur), main = "Plot Umur", col = "purple")
+plot(density(diabetes1$blood_glucose_level), main = "Plot Riwayat Gula Darah", col = "red")
+
+qqnorm(umur, col = "purple")
+qqline(umur)
+qqnorm(diabetes1$blood_glucose_level, col = "red")
+qqline(diabetes1$blood_glucose_level)
+```
+
+# Regresi
+```{r}
+cor.test(diabetes1$blood_glucose_level, diabetes1$diabetes, method = "spearman")
+# Korelasi pada blood_glucose_level dan diabetes memiliki hubungan korelasi positif rendah dengan rho 0,2742168.
+
+judul = "Scatter Plot Riwayat Gula Darah vs Diabetes"
+plot(diabetes1$blood_glucose_level, diabetes1$diabetes, col = c("red","blue"), main = judul)
+abline(lm(diabetes1$diabetes~diabetes1$blood_glucose_level))
+
+# modeling 
+model <- lm(diabetes1$blood_glucose_level~diabetes1$diabetes)
+summary (model)
+
+# Pengecekan Asumsi Regresi Linear
+par(mfrow = c(2,2))
+plot(model)
+par(mfrow = c(1,1))
+
+# Uji otokorelasi
+lmtest::dwtest(model)
+# Residual ber autokorelasi karena p-value (0,7137) > 0,05.
+
+# Uji homoskedastisitas
+lmtest::bptest(model)
+# Varians berubah-ubah dan residual tidak homoskedastis karena p-value (<2,2e-16) < 0,05.
+
+# Uji normalitas
+ad.test(model$residuals)
+# Data tidak berdistribusi dengan normal karena p-value (<2,2e-16) < 0,05.
+```
+
+# Uji Hipotesa 1 - Kruskal Wallis
+```{r}
+# Barplot
+judul <- "Distribusi Riwayat Merokok Berdasarkan Jenis Kelamin"
+(tabel <- table(diabetes1$smoking_history, diabetes1$gender))
+barplot(tabel, main = judul, col = 1:nrow(tabel), beside = TRUE)
+legend("topleft", legend = rownames(tabel), pch = 15, col = 1:nrow(tabel))
+
+# Uji Hipotesa 1 
+kruskal.test(diabetes1$gender~diabetes1$smoking_history)
+# H0 ditolak Ha diterima
+```
+
+# Uji Hipotesa 2 - Annova, Turkey HSD
+```{r}
+# Uji Hipotesa 2
+result1 <- aov(umur~diabetes1$smoking_history)
+result1
+summary(result1)
+
+# Turkey HSD
+th <- TukeyHSD (result1, conf.level = 0.95)
+th
+plot(th)
+
+# H0 ditolak Ha diterima
+```
+
+# Uji Hipotesa 3 - Chisquare
+```{r}
+# Barplot
+judul <- "Distribusi Penyakit Jantung Berdasarkan Riwayat Merokok"
+(tabel <- table(diabetes1$heart_disease, diabetes1$smoking_history))
+barplot(tabel, main = judul, col = 1:nrow(tabel), beside = TRUE)
+legend("topleft", legend = rownames(tabel), pch = 15, col = 1:nrow(tabel))
+
+# Uji Hipotesa 3
+chisq.test(diabetes1$smoking_history, diabetes1$heart_disease)
+
+# H0 ditolak Ha diterima
+```
+
+# Uji Hipotesa 4 - Anova & HSD Kramer
+```{r}
+# Uji Hipotesa 4
+result2 <- aov(diabetes1$blood_glucose_level~diabetes1$smoking_history)
+result2
+summary(result2)
+
+# HSD Kramer
+tk <- TukeyHSD (result2, ordered = TRUE)
+tk
+plot(tk)
+
+# H0 ditolak Ha diterima
+```
+
+# Uji Hipotesa 5 - Wilcoxon
+```{r}
+# Barplot
+judul <- "Distribusi Diabetes Berdasarkan Riwayat Penyakit Jantung"
+(tabel <- table(diabetes1$diabetes, diabetes1$heart_disease))
+barplot(tabel, main = judul, col = 1:nrow(tabel), beside = TRUE)
+legend("topright", legend = rownames(tabel), pch = 15, col = 1:nrow(tabel))
+
+# Uji Hipotesa 5
+wilcox.test(diabetes1$heart_disease, diabetes1$diabetes)
+
+# H0 ditolak Ha diterima
+```
+
+# Uji Hipotesa 6 - Kruskal Wallis
+```{r}
+# Uji Hipotesa 6
+kruskal.test(diabetes1$blood_glucose_level~diabetes1$diabetes)
+
+# H0 ditolak Ha diterima
+```
+
